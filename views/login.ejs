@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - لوحة التحكم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-neutral-950 text-white flex items-center justify-center min-h-screen p-4">
+    <div class="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl w-full max-w-md text-center shadow-2xl">
+        <h2 class="text-2xl font-bold mb-2">لوحة تحكم العالمية</h2>
+        <p class="text-gray-400 text-sm mb-6">يرجى إدخال رمز الأمان للوصول</p>
+        
+        <% if (error) { %>
+            <div class="bg-red-600/20 border border-red-500 text-red-400 p-2 rounded mb-4 text-sm"><%= error %></div>
+        <% } %>
+
+        <form action="/login" method="POST" class="space-y-4">
+            <input type="password" name="pin" placeholder="أدخل الرمز السري..." required class="w-full text-center tracking-widest text-lg p-3 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-amber-500">
+            <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 rounded-lg">دخول</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة العالمية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-neutral-950 text-gray-100 p-4 md:p-8 font-sans" x-data="{ searchProduct: '', searchVideo: '' }">
+
+    <div class="max-w-5xl mx-auto flex justify-between items-center mb-8 border-b border-neutral-800 pb-4">
+        <h1 class="text-2xl font-bold text-amber-400">لوحة تحكم متجر العالمية</h1>
+        <div class="flex gap-2">
+            <a href="/" class="bg-neutral-800 text-white px-4 py-2 rounded text-xs">عرض المتجر</a>
+            <a href="/logout" class="bg-red-600 text-white px-4 py-2 rounded text-xs">تسجيل الخروج</a>
+        </div>
+    </div>
+
+    <!-- إضافة فيديو -->
+    <div class="max-w-5xl mx-auto bg-neutral-900 p-6 rounded-xl border border-neutral-800 mb-10 shadow-2xl">
+        <h2 class="text-lg font-bold mb-4 text-amber-400">🎬 إضافة فيديو جديد</h2>
+        <form action="/admin/video/add" method="POST" enctype="multipart/form-data" class="space-y-3">
+            <input type="text" name="title" placeholder="عنوان الفيديو / وصف قصير" required class="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-sm text-white focus:outline-none focus:border-amber-500">
+            <input type="file" name="video" accept="video/*" required class="w-full p-2 bg-neutral-800 border border-neutral-700 rounded text-xs text-gray-300">
+            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-black font-bold px-6 py-2 rounded text-sm">نشر الفيديو</button>
+        </form>
+
+        <div class="flex justify-between items-center mt-8 mb-4 border-t border-neutral-800 pt-4">
+            <h3 class="text-md font-bold text-white">الفيديوهات الحالية</h3>
+            <input type="text" x-model="searchVideo" placeholder="🔍 بحث في الفيديوهات..." class="bg-neutral-800 border border-neutral-700 text-xs text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-amber-500 w-48 md:w-64">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <% videos.forEach(v => { %>
+                <div x-show="!searchVideo || '<%= v.title %>'.toLowerCase().includes(searchVideo.toLowerCase())" 
+                     class="border border-neutral-800 bg-neutral-950 p-3 rounded-lg flex gap-3 items-center">
+                    <video src="<%= v.video_path %>" class="w-20 h-24 object-cover rounded bg-black" muted></video>
+                    <div class="flex-1 space-y-2">
+                        <form action="/admin/video/edit/<%= v.id %>" method="POST" enctype="multipart/form-data" class="space-y-2">
+                            <input type="text" name="title" value="<%= v.title %>" class="w-full p-1 bg-neutral-800 text-xs rounded border border-neutral-700 text-white">
+                            <input type="file" name="video" accept="video/*" class="text-[10px] text-gray-400">
+                            <button type="submit" class="bg-yellow-600 text-white text-[10px] px-2 py-1 rounded">حفظ التعديل</button>
+                        </form>
+                        <form action="/admin/video/delete/<%= v.id %>" method="POST">
+                            <button class="bg-red-600 text-white text-[10px] px-2 py-1 rounded">حذف الفيديو</button>
+                        </form>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <!-- إضافة موديل / منتج -->
+    <div class="max-w-5xl mx-auto bg-neutral-900 p-6 rounded-xl border border-neutral-800 shadow-2xl">
+        <h2 class="text-lg font-bold mb-4 text-blue-400">🛍️ إضافة موديل / منتج جديد</h2>
+        <form action="/admin/add" method="POST" enctype="multipart/form-data" class="space-y-3">
+            <input type="text" name="name" placeholder="اسم الموديل / المنتج" required class="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-sm text-white focus:outline-none focus:border-blue-500">
+            
+            <select name="category" required class="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-sm text-white focus:outline-none focus:border-blue-500">
+                <option value="" disabled selected>اختر القسم / التصنيف</option>
+                <option value="عروض الموسم">عروض الموسم</option>
+                <option value="هدايا من القلب">هدايا من القلب</option>
+                <option value="الساعات الفاخرة">الساعات الفاخرة</option>
+                <option value="الرجال">الرجال</option>
+                <option value="النساء">النساء</option>
+                <option value="المجوهرات والاكسسوارات">المجوهرات والاكسسوارات</option>
+                <option value="العطور">العطور</option>
+                <option value="الاسسوارات">الاسسوارات</option>
+                <option value="ساعات رجالي">ساعات رجالي</option>
+                <option value="ساعات نسائي">ساعات نسائي</option>
+                <option value="ساعات ولادي">ساعات ولادي</option>
+                <option value="ساعات رقمي">ساعات رقمي</option>
+                <option value="علب هدايا">علب هدايا</option>
+                <option value="ساعات ماركه">ساعات ماركه</option>
+                <option value="ساعات جديده">ساعات جديده</option>
+            </select>
+
+            <input type="number" step="0.01" name="price" placeholder="السعر (بالريال اليمني - ر.ي)" required class="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-sm text-white focus:outline-none focus:border-blue-500">
+            <textarea name="description" placeholder="تفاصيل الموديل (الألوان، المقاسات...)" class="w-full p-2.5 bg-neutral-800 border border-neutral-700 rounded text-sm text-white focus:outline-none focus:border-blue-500"></textarea>
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">اختر صورة أو صور متعددة للموديل:</label>
+                <input type="file" name="images" accept="image/*" multiple required class="w-full p-2 bg-neutral-800 border border-neutral-700 rounded text-xs text-gray-300">
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded text-sm">نشر الموديل بالكامل</button>
+        </form>
+
+        <div class="flex justify-between items-center mt-8 mb-4 border-t border-neutral-800 pt-4">
+            <h3 class="text-md font-bold text-white">الموديلات والمنتجات الحالية</h3>
+            <input type="text" x-model="searchProduct" placeholder="🔍 بحث عن منتج أو سعر..." class="bg-neutral-800 border border-neutral-700 text-xs text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-blue-500 w-48 md:w-64">
+        </div>
+
+        <div class="space-y-4">
+            <% products.forEach(p => { %>
+                <div x-show="!searchProduct || '<%= p.name %>'.toLowerCase().includes(searchProduct.toLowerCase()) || '<%= p.description %>'.toLowerCase().includes(searchProduct.toLowerCase()) || '<%= p.price %>'.includes(searchProduct)"
+                     class="border border-neutral-800 bg-neutral-950 p-3 rounded-lg flex flex-col md:flex-row gap-3 items-center">
+                    <div class="flex gap-1 overflow-x-auto max-w-[120px]">
+                        <% p.imagesArr.forEach(img => { %>
+                            <img src="<%= img %>" class="w-12 h-12 object-cover rounded flex-shrink-0">
+                        <% }) %>
+                    </div>
+                    <form action="/admin/edit/<%= p.id %>" method="POST" enctype="multipart/form-data" class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2 w-full">
+                        <input type="text" name="name" value="<%= p.name %>" class="p-1 bg-neutral-800 text-xs text-white rounded">
+                        <select name="category" class="p-1 bg-neutral-800 text-xs text-white rounded">
+                            <% const cats = ['عروض الموسم', 'هدايا من القلب', 'الساعات الفاخرة', 'الرجال', 'النساء', 'المجوهرات والاكسسوارات', 'العطور', 'الاسسوارات', 'ساعات رجالي', 'ساعات نسائي', 'ساعات ولادي', 'ساعات رقمي', 'علب هدايا', 'ساعات ماركه', 'ساعات جديده']; %>
+                            <% cats.forEach(c => { %>
+                                <option value="<%= c %>" <%= p.category === c ? 'selected' : '' %>><%= c %></option>
+                            <% }) %>
+                        </select>
+                        <input type="number" step="0.01" name="price" value="<%= p.price %>" class="p-1 bg-neutral-800 text-xs text-white rounded">
+                        <input type="text" name="description" value="<%= p.description %>" class="p-1 bg-neutral-800 text-xs text-white rounded">
+                        <div class="md:col-span-4 flex gap-2 items-center">
+                            <input type="file" name="images" accept="image/*" multiple class="text-[10px] text-gray-400">
+                            <button type="submit" class="bg-yellow-600 text-white text-[10px] px-3 py-1 rounded">حفظ التعديل</button>
+                        </div>
+                    </form>
+                    <form action="/admin/delete/<%= p.id %>" method="POST">
+                        <button class="bg-red-600 text-white text-[10px] px-3 py-1 rounded whitespace-nowrap">حذف</button>
+                    </form>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>العالمية | ALAMIAH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body { background-color: #0a0a0a; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body x-data="{
+    menuOpen: false,
+    cartOpen: false,
+    reelsOpen: false,
+    commentsOpen: false,
+    productModalOpen: false,
+    fullscreenImageSrc: null,
+    selectedProduct: null,
+    selectedImageIndex: 0,
+    activeVideoId: null,
+    selectedCategory: 'الكل',
+    commentsList: [],
+    newCommentName: '',
+    newCommentText: '',
+    cart: [],
+    categories: [
+        'عروض الموسم',
+        'هدايا من القلب',
+        'الساعات الفاخرة',
+        'الرجال',
+        'النساء',
+        'المجوهرات والاكسسوارات',
+        'العطور',
+        'الاسسوارات',
+        'ساعات رجالي',
+        'ساعات نسائي',
+        'ساعات ولادي',
+        'ساعات رقمي',
+        'علب هدايا',
+        'ساعات ماركه',
+        'ساعات جديده'
+    ],
+    products: <%= JSON.stringify(products) %>,
+    videos: <%= JSON.stringify(videos) %>,
+
+    openProductModal(p) {
+        this.selectedProduct = p;
+        this.selectedImageIndex = 0;
+        this.productModalOpen = true;
+    },
+    openReel(index) {
+        this.reelsOpen = true;
+        $nextTick(() => {
+            const item = document.getElementById('reel-item-' + index);
+            if (item) item.scrollIntoView({ behavior: 'auto' });
+            const video = document.getElementById('reel-video-' + index);
+            if (video) video.play().catch(() => {});
+        });
+    },
+    closeReels() {
+        this.reelsOpen = false;
+        this.commentsOpen = false;
+        document.querySelectorAll('.reel-video-player').forEach(v => {
+            v.pause();
+            v.currentTime = 0;
+        });
+    },
+    async likeVideo(vIndex) {
+        const video = this.videos[vIndex];
+        const res = await fetch('/api/video/like/' + video.id, { method: 'POST' });
+        const data = await res.json();
+        if (data.likes !== undefined) video.likes = data.likes;
+    },
+    async openComments(vIndex) {
+        const video = this.videos[vIndex];
+        this.activeVideoId = video.id;
+        const res = await fetch('/api/video/comments/' + video.id);
+        const data = await res.json();
+        this.commentsList = data.comments;
+        this.commentsOpen = true;
+    },
+    async sendComment() {
+        if (!this.newCommentText.trim()) return;
+        const res = await fetch('/api/video/comment/' + this.activeVideoId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: this.newCommentName, comment: this.newCommentText })
+        });
+        const data = await res.json();
+        this.commentsList = data.comments;
+        const v = this.videos.find(item => item.id === this.activeVideoId);
+        if (v) v.comment_count = (v.comment_count || 0) + 1;
+        this.newCommentText = '';
+    },
+    shareVideo(title) {
+        if (navigator.share) {
+            navigator.share({ title: title, url: window.location.href }).catch(() => {});
+        } else {
+            const text = 'شاهد هذا الفيديو المميز في متجر العالمية: ' + title + ' ' + window.location.href;
+            window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+        }
+    }
+}">
+
+    <header class="sticky top-0 z-40 bg-black/90 backdrop-blur-md border-b border-neutral-800 px-4 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <button @click="menuOpen = true" class="text-white p-1 focus:outline-none">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <a href="/admin" class="text-xs bg-neutral-800 hover:bg-neutral-700 text-amber-400 px-2 py-1 rounded border border-amber-500/30">لوحة التحكم</a>
+            </div>
+            <h1 class="text-2xl font-black tracking-widest text-white font-serif">العالمية</h1>
+            <button @click="cartOpen = true" class="relative p-2 text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                <span x-show="cart.length > 0" x-text="cart.length" class="absolute top-0 right-0 bg-amber-500 text-black font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- القائمة الجانبية للأقسام -->
+    <div x-show="menuOpen" class="fixed inset-0 z-50 flex" x-cloak>
+        <div @click="menuOpen = false" class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-4/5 max-w-xs bg-neutral-900 h-full overflow-y-auto z-10 border-l border-neutral-800 text-white p-4">
+            <div class="flex justify-between items-center pb-4 border-b border-neutral-800">
+                <h2 class="text-lg font-bold">القائمة الرئيسية</h2>
+                <button @click="menuOpen = false" class="text-2xl text-gray-400">&times;</button>
+            </div>
+            <div class="mt-4 space-y-1.5">
+                <button @click="selectedCategory = 'الكل'; menuOpen = false" 
+                        :class="selectedCategory === 'الكل' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800/60 text-white hover:bg-neutral-800'"
+                        class="w-full text-right p-3 rounded-lg text-sm transition">
+                    جميع المنتجات
+                </button>
+                <template x-for="cat in categories" :key="cat">
+                    <button @click="selectedCategory = cat; menuOpen = false" 
+                            :class="selectedCategory === cat ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800/60 text-white hover:bg-neutral-800'"
+                            class="w-full text-right p-3 rounded-lg text-sm border border-neutral-800/80 transition flex items-center justify-between">
+                        <span x-text="cat"></span>
+                        <span class="text-xs text-amber-400">←</span>
+                    </button>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- سلايدر الإعلانات المتحركة -->
+    <template x-if="products.length > 0">
+        <section class="max-w-6xl mx-auto px-4 pt-4" x-data="{
+            activeSlide: 0,
+            timer: null,
+            init() {
+                this.timer = setInterval(() => {
+                    if (products.length > 0) {
+                        this.activeSlide = (this.activeSlide + 1) % Math.min(products.length, 5);
+                    }
+                }, 3500);
+            }
+        }">
+            <div class="relative w-full h-52 md:h-64 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900 shadow-2xl">
+                <template x-for="(p, index) in products.slice(0, 5)" :key="p.id">
+                    <div x-show="activeSlide === index"
+                         x-transition:enter="transition ease-out duration-700"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         @click="openProductModal(p)"
+                         class="absolute inset-0 cursor-pointer group">
+                        <img :src="p.imagesArr && p.imagesArr.length > 0 ? p.imagesArr[0] : p.image" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col justify-end p-4">
+                            <span class="bg-amber-500 text-black text-[10px] font-extrabold px-2.5 py-0.5 rounded-full w-max mb-1 shadow-md">🔥 عرض خاص / جديد</span>
+                            <h3 class="text-lg md:text-xl font-black text-white group-hover:text-amber-400 transition" x-text="p.name"></h3>
+                            <p class="text-xs text-gray-300 line-clamp-1 mt-0.5" x-text="p.description"></p>
+                            <div class="text-amber-400 font-black text-base mt-1 flex items-center justify-between">
+                                <div><span x-text="p.price"></span> ر.ي</div>
+                                <span class="bg-neutral-800/80 text-white text-[10px] px-2.5 py-1 rounded-lg border border-neutral-700">عرض التفاصيل 🔍</span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <div class="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10">
+                    <template x-for="(p, index) in products.slice(0, 5)" :key="index">
+                        <button @click.stop="activeSlide = index"
+                                :class="activeSlide === index ? 'bg-amber-500 w-6' : 'bg-white/40 w-2'"
+                                class="h-1.5 rounded-full transition-all duration-300"></button>
+                    </template>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <div x-show="cartOpen" class="fixed inset-0 z-50 flex justify-end" x-cloak>
+        <div @click="cartOpen = false" class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-4/5 max-w-sm bg-neutral-900 h-full overflow-y-auto z-10 border-r border-neutral-800 p-4 flex flex-col justify-between text-white">
+            <div>
+                <div class="flex justify-between items-center pb-4 border-b border-neutral-800">
+                    <h2 class="text-lg font-bold">عربة التسوق</h2>
+                    <button @click="cartOpen = false" class="text-2xl text-gray-400">&times;</button>
+                </div>
+                <div class="mt-4 space-y-3">
+                    <template x-if="cart.length === 0">
+                        <p class="text-center text-gray-500 py-8">السلة فارغة حالياً</p>
+                    </template>
+                    <template x-for="(item, index) in cart" :key="index">
+                        <div class="flex items-center justify-between bg-neutral-800 p-3 rounded-lg">
+                            <div>
+                                <h4 x-text="item.name" class="font-bold text-sm"></h4>
+                                <p x-text="item.price + ' ر.ي'" class="text-amber-400 text-xs"></p>
+                            </div>
+                            <button @click="cart.splice(index, 1)" class="text-red-500 text-xs">حذف</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <div class="border-t border-neutral-800 pt-4">
+                <a :href="'https://wa.me/967776698022?text=' + encodeURIComponent('طلب جديد من العالمية:\n' + cart.map(i => '- ' + i.name + ' (' + i.price + ' ر.ي)').join('\n'))"
+                   target="_blank"
+                   class="w-full block text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg">
+                    إتمام الطلب عبر الواتساب
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <template x-if="videos.length > 0">
+        <section class="max-w-6xl mx-auto px-4 pt-6">
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">🎬 استعراض الفيديوهات</h3>
+            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                <template x-for="(v, index) in videos" :key="v.id">
+                    <div @click="openReel(index)" 
+                         class="min-w-[140px] h-60 bg-neutral-900 rounded-xl overflow-hidden relative border border-neutral-800 cursor-pointer flex-shrink-0 group hover:border-amber-500 transition shadow-lg">
+                        <video :src="v.video_path + '#t=0.5'" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
+                        <div class="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/10 transition">
+                            <div class="w-11 h-11 rounded-full bg-amber-500/90 text-black flex items-center justify-center pl-1 shadow-xl transform group-hover:scale-110 transition">▶</div>
+                        </div>
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 text-[11px] text-center font-bold text-white truncate" x-text="v.title"></div>
+                    </div>
+                </template>
+            </div>
+        </section>
+    </template>
+
+    <div x-show="reelsOpen" class="fixed inset-0 z-50 bg-black flex flex-col" x-cloak>
+        <button @click="closeReels()" class="absolute top-5 right-5 z-50 text-white bg-black/60 hover:bg-neutral-800 p-2.5 rounded-full border border-neutral-700 shadow-2xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar" id="reelsContainer">
+            <template x-for="(v, index) in videos" :key="v.id">
+                <div :id="'reel-item-' + index" class="reel-item w-full h-full snap-start snap-always flex items-center justify-center relative bg-black flex-shrink-0">
+                    <video :id="'reel-video-' + index"
+                           :src="v.video_path"
+                           class="reel-video-player w-full h-full object-contain"
+                           loop
+                           playsinline
+                           onclick="this.paused ? this.play() : this.pause()"></video>
+
+                    <div class="absolute right-4 bottom-24 z-30 flex flex-col items-center space-y-5">
+                        <button @click="likeVideo(index)" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-125 transition">
+                                <svg class="w-7 h-7 text-red-500 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                            </div>
+                            <span class="text-white text-xs font-bold mt-1 shadow-md" x-text="v.likes || 0"></span>
+                        </button>
+
+                        <button @click="openComments(index)" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-125 transition">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            </div>
+                            <span class="text-white text-xs font-bold mt-1 shadow-md" x-text="v.comment_count || 0"></span>
+                        </button>
+
+                        <button @click="shareVideo(v.title)" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-125 transition">
+                                <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                            </div>
+                            <span class="text-white text-xs font-bold mt-1 shadow-md">مشاركة</span>
+                        </button>
+                    </div>
+
+                    <div class="absolute bottom-10 left-4 z-10 text-white max-w-[70%]">
+                        <span class="bg-amber-500 text-black text-[10px] font-extrabold px-2.5 py-1 rounded-full tracking-wider uppercase">العالمية REELS</span>
+                        <h3 class="font-bold text-lg drop-shadow-md leading-snug mt-2" x-text="v.title"></h3>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="commentsOpen" class="fixed inset-x-0 bottom-0 z-50 bg-neutral-900 border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60vh] flex flex-col justify-between" x-cloak>
+            <div class="flex justify-between items-center pb-3 border-b border-neutral-800">
+                <h3 class="text-sm font-bold text-white">التعليقات</h3>
+                <button @click="commentsOpen = false" class="text-gray-400 text-xl">&times;</button>
+            </div>
+
+            <div class="overflow-y-auto space-y-3 my-3 flex-1 no-scrollbar">
+                <template x-if="commentsList.length === 0">
+                    <p class="text-center text-gray-500 text-xs py-6">لا توجد تعليقات بعد، كن أول من يعلق!</p>
+                </template>
+                <template x-for="c in commentsList" :key="c.id">
+                    <div class="bg-neutral-800 p-2.5 rounded-lg border border-neutral-700">
+                        <div class="flex justify-between text-[11px] text-amber-400 font-bold mb-1">
+                            <span x-text="c.name"></span>
+                            <span class="text-gray-500 text-[9px]" x-text="c.created_at"></span>
+                        </div>
+                        <p class="text-xs text-gray-200" x-text="c.comment"></p>
+                    </div>
+                </template>
+            </div>
+
+            <div class="space-y-2 border-t border-neutral-800 pt-2">
+                <input type="text" x-model="newCommentName" placeholder="اسمك (اختياري)..." class="w-full bg-neutral-800 border border-neutral-700 text-xs text-white p-2 rounded">
+                <div class="flex gap-2">
+                    <input type="text" x-model="newCommentText" placeholder="اكتب تعليقك هنا..." class="flex-1 bg-neutral-800 border border-neutral-700 text-xs text-white p-2 rounded focus:outline-none focus:border-amber-500">
+                    <button @click="sendComment()" class="bg-amber-500 text-black text-xs font-bold px-4 py-2 rounded">إرسال</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-6xl mx-auto p-4">
+        <div class="flex items-center justify-between mb-4 border-r-4 border-amber-500 pr-2">
+            <h3 class="text-lg font-bold text-white" x-text="selectedCategory === 'الكل' ? 'جميع المنتجات والموديلات' : 'قسم: ' + selectedCategory"></h3>
+            <button x-show="selectedCategory !== 'الكل'" @click="selectedCategory = 'الكل'" class="text-xs bg-neutral-800 text-amber-400 px-2 py-1 rounded">إلغاء التصفية ✕</button>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <template x-for="p in products" :key="p.id">
+                <div x-show="selectedCategory === 'الكل' || p.category === selectedCategory" 
+                     class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div @click="openProductModal(p)" class="relative cursor-pointer group overflow-hidden">
+                            <img :src="p.imagesArr && p.imagesArr.length > 0 ? p.imagesArr[0] : p.image" class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
+                            <template x-if="p.imagesArr && p.imagesArr.length > 1">
+                                <span class="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                    <span x-text="p.imagesArr.length"></span> صور
+                                </span>
+                            </template>
+                        </div>
+                        <div class="p-3">
+                            <span class="text-[10px] bg-neutral-800 text-amber-400 px-2 py-0.5 rounded mb-1 inline-block" x-text="p.category || 'عام'"></span>
+                            <h4 @click="openProductModal(p)" class="font-bold text-sm text-gray-100 truncate cursor-pointer hover:text-amber-400" x-text="p.name"></h4>
+                            <p class="text-xs text-gray-400 mt-1 line-clamp-2" x-text="p.description"></p>
+                            <span class="text-amber-400 font-extrabold text-base block mt-2">
+                                <span x-text="p.price"></span> ر.ي
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-3 pt-0 flex gap-2">
+                        <button @click="cart.push({ name: p.name, price: p.price })" 
+                                class="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold py-2 rounded border border-neutral-700">
+                            + السلة
+                        </button>
+                        <a :href="'https://wa.me/967776698022?text=طلب%20موديل:%20' + encodeURIComponent(p.name)" 
+                           target="_blank" 
+                           class="bg-green-600 hover:bg-green-700 text-white p-2 rounded text-xs flex items-center justify-center">
+                           📲
+                        </a>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <div x-show="productModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" x-cloak>
+        <div @click="productModalOpen = false" class="fixed inset-0 bg-black/80 backdrop-blur-md"></div>
+        <div class="relative bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg overflow-hidden z-10 p-5 max-h-[90vh] overflow-y-auto no-scrollbar space-y-4 text-white">
+            <button @click="productModalOpen = false" class="absolute top-3 left-3 text-gray-400 hover:text-white text-2xl font-bold z-20">&times;</button>
+            
+            <template x-if="selectedProduct">
+                <div class="space-y-4">
+                    <div class="relative rounded-xl overflow-hidden bg-black border border-neutral-800 cursor-zoom-in"
+                         @click="fullscreenImageSrc = selectedProduct.imagesArr[selectedImageIndex]">
+                        <img :src="selectedProduct.imagesArr[selectedImageIndex]" class="w-full h-72 object-contain mx-auto">
+                        <div class="absolute bottom-2 inset-x-0 text-center">
+                            <span class="bg-black/70 backdrop-blur-md text-amber-400 text-[10px] px-3 py-1 rounded-full font-bold">انقر للتكبير ملء الشاشة 🔍</span>
+                        </div>
+                    </div>
+
+                    <template x-if="selectedProduct.imagesArr && selectedProduct.imagesArr.length > 1">
+                        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                            <template x-for="(img, idx) in selectedProduct.imagesArr" :key="idx">
+                                <img :src="img" 
+                                     @click="selectedImageIndex = idx" 
+                                     :class="selectedImageIndex === idx ? 'border-2 border-amber-500 scale-105' : 'opacity-60 border border-neutral-700'"
+                                     class="w-16 h-16 object-cover rounded-lg cursor-pointer transition flex-shrink-0">
+                            </template>
+                        </div>
+                    </template>
+
+                    <div class="space-y-2 border-t border-neutral-800 pt-3">
+                        <span class="text-xs bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full font-bold inline-block" x-text="selectedProduct.category || 'عام'"></span>
+                        <h2 class="text-xl font-bold text-white" x-text="selectedProduct.name"></h2>
+                        <div class="text-amber-400 font-black text-xl">
+                            <span x-text="selectedProduct.price"></span> ر.ي
+                        </div>
+                        <p class="text-sm text-gray-300 leading-relaxed" x-text="selectedProduct.description"></p>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button @click="cart.push({ name: selectedProduct.name, price: selectedProduct.price }); productModalOpen = false" 
+                                class="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 rounded-xl text-sm">
+                            إضافة إلى السلة 🛒
+                        </button>
+                        <a :href="'https://wa.me/967776698022?text=طلب%20موديل:%20' + encodeURIComponent(selectedProduct.name)" 
+                           target="_blank" 
+                           class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm text-center">
+                            طلب عبر الواتساب 📲
+                        </a>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div x-show="fullscreenImageSrc" class="fixed inset-0 z-50 bg-black flex items-center justify-center p-2" x-cloak @click="fullscreenImageSrc = null">
+        <button @click="fullscreenImageSrc = null" class="absolute top-5 right-5 text-white bg-neutral-900/80 p-3 rounded-full z-50 text-xl font-bold">&times;</button>
+        <img :src="fullscreenImageSrc" class="max-w-full max-h-full object-contain cursor-pointer">
+    </div>
+
+    <footer class="bg-black border-t border-neutral-800 p-6 text-center text-gray-400 text-xs space-y-2 mt-10">
+        <p class="text-white font-bold text-sm">متجر العالمية</p>
+        <p>واتساب / اتصال: +967 776698022</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('reelsContainer');
+            if (!container) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const video = entry.target.querySelector('.reel-video-player');
+                    if (video) {
+                        if (entry.isIntersecting) {
+                            video.play().catch(() => {});
+                        } else {
+                            video.pause();
+                        }
+                    }
+                });
+            }, { root: container, threshold: 0.6 });
+
+            document.querySelectorAll('.reel-item').forEach(item => observer.observe(item));
+        });
+    </script>
+</body>
+</html>
