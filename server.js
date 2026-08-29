@@ -1,9 +1,13 @@
 const express = require('express');
+const compression = require('compression');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
+
+// 1. تفعيل الضغط لتسريع نقل البيانات
+app.use(compression());
 
 // Vercel يسمح بالكتابة فقط داخل المجلد المؤقت /tmp
 const dbPath = process.env.VERCEL ? '/tmp/database.db' : path.join(__dirname, 'database.db');
@@ -18,7 +22,7 @@ if (process.env.VERCEL && fs.existsSync(path.join(__dirname, 'database.db')) && 
 
 const db = new sqlite3.Database(dbPath);
 
-// إنشاء الجداول تلقائياً لتفادي أخطاء الاستعلام
+// إنشاء الجداول تلقائياً
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,11 +40,11 @@ db.serialize(() => {
     )`);
 });
 
-// Middleware
+// Middleware وإدارة الكاش
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '30d' }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '30d' }));
 
 const auth = (req, res, next) => next();
 
@@ -58,6 +62,7 @@ app.post('/api/video/comment/:id', (req, res) => {
     db.run("INSERT INTO comments (video_id, name, comment) VALUES (?, ?, ?)", [req.params.id, name, comment], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         db.all("SELECT * FROM comments WHERE video_id = ? ORDER BY id DESC", [req.params.id], (err, comments) => {
+            if (err) return res.status(500).json({ error: err.message });
             res.json({ comments: comments || [] });
         });
     });
@@ -78,6 +83,7 @@ app.post('/api/chat/send', (req, res) => {
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             db.all("SELECT * FROM messages ORDER BY id ASC", [], (err, messages) => {
+                if (err) return res.status(500).json({ error: err.message });
                 res.json({ messages: messages || [] });
             });
         }
@@ -107,4 +113,3 @@ if (!process.env.VERCEL) {
 }
 
 module.exports = app;
-
