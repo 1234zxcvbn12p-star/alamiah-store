@@ -3,10 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>العالمية للساعات</title>
+    <title>العالمية للساعات - الفخامة والأناقة</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; text-align: center; }
+        header { padding: 40px 20px; border-bottom: 1px solid #334155; }
+        h1 { color: #fbbf24; margin-bottom: 10px; font-size: 2.2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: right; }
+        .card img { width: 100%; border-radius: 8px; height: 220px; object-fit: cover; }
+        .card h3 { color: #f8fafc; margin: 15px 0 5px; }
+        .price { color: #fbbf24; font-weight: bold; font-size: 1.2rem; }
+        .btn { display: block; width: 100%; padding: 12px; background: #25d366; color: white; border: none; border-radius: 6px; font-weight: bold; text-decoration: none; text-align: center; margin-top: 15px; box-sizing: border-box; }
+    </style>
 </head>
-<body style="font-family: sans-serif; text-align: center; padding: 50px;">
-    <h1>مرحباً بك في العالمية للساعات</h1>
-    <p>المتجر يعمل بنجاح الآن!</p>
+<body>
+    <header>
+        <h1>العالمية للساعات</h1>
+        <p>تشكيلة فاخرة من أرقى الساعات العصرية</p>
+    </header>
+
+    <div class="grid">
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500" alt="ساعة رجالية" loading="lazy">
+            <h3>ساعة كلاسيكية فاخرة</h3>
+            <p class="price">250 ر.س</p>
+            <a href="https://wa.me/?text=أرغب%20في%20طلب%20الساعة%20الكلاسيكية" class="btn">طلب عبر الواتساب</a>
+        </div>
+    </div>
 </body>
 </html>
